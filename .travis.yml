@@ -3,7 +3,17 @@ compiler:
   - gcc
   - clang
 env:
-  - TEST_FOLDER=mono
+  - TEST_FOLDER=mono TEST_TARGET=test-wrench CI=1 V=1
+  - TEST_FOLDER=mcs/class/corlib TEST_TARGET=run-test PROFILE=net_2_0
+  - TEST_FOLDER=mcs/class/corlib TEST_TARGET=run-test PROFILE=net_3_5
+  - TEST_FOLDER=mcs/class/corlib TEST_TARGET=run-test PROFILE=net_4_0
+  - TEST_FOLDER=mcs/class/corlib TEST_TARGET=run-test PROFILE=net_4_5
+  - TEST_FOLDER=mcs/class/corlib TEST_TARGET=run-test PROFILE=xbuild_12
+  # net_3_5 and xbuild_12 are currently failing... should investigate?
+matrix:
+  allow_failures:
+    - env: TEST_FOLDER=mcs/class/corlib TEST_TARGET=run-test PROFILE=net_3_5
+    - env: TEST_FOLDER=mcs/class/corlib TEST_TARGET=run-test PROFILE=xbuild_12
 before_install:
   - date
   - ./autogen.sh
@@ -17,5 +27,5 @@ script:
   # why is make install needed for testing?
   - sudo make install
   - date
-  - cd $TEST_FOLDER && make check V=1 CI=1
+  - cd $TEST_FOLDER && make check
   - date
