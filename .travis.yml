@@ -3,13 +3,7 @@ compiler:
   - gcc
   - clang
 env:
-  # currently failing... should investigate?
   - TEST_FOLDER=mono
-  - TEST_FOLDER=mcs/class/corlib PROFILE=net_2_0
-  # - TEST_FOLDER=mcs/class/corlib PROFILE=net_3_5
-  - TEST_FOLDER=mcs/class/corlib PROFILE=net_4_0
-  - TEST_FOLDER=mcs/class/corlib PROFILE=net_4_5
-  # - TEST_FOLDER=mcs/class/corlib PROFILE=xbuild_12
 before_install:
   - date
   - ./autogen.sh
@@ -23,5 +17,5 @@ script:
   # why is make install needed for testing?
   - sudo make install
   - date
-  - cd $TEST_FOLDER && make check
+  - cd $TEST_FOLDER && make check V=1 CI=1
   - date
