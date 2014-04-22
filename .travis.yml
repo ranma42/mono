@@ -27,5 +27,5 @@ script:
   # why is make install needed for testing?
   - sudo make install
   - date
-  - cd $TEST_FOLDER && make check
+  - cd $TEST_FOLDER && make $TEST_TARGET
   - date
