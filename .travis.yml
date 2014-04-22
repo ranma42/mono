@@ -1,0 +1,27 @@
+language: c
+compiler:
+  - gcc
+  - clang
+env:
+  # currently failing... should investigate?
+  - TEST_FOLDER=mono
+  - TEST_FOLDER=mcs/class/corlib PROFILE=net_2_0
+  # - TEST_FOLDER=mcs/class/corlib PROFILE=net_3_5
+  - TEST_FOLDER=mcs/class/corlib PROFILE=net_4_0
+  - TEST_FOLDER=mcs/class/corlib PROFILE=net_4_5
+  # - TEST_FOLDER=mcs/class/corlib PROFILE=xbuild_12
+before_install:
+  - date
+  - ./autogen.sh
+install:
+  - date
+  - make get-monolite-latest
+script:
+  - date
+  - make -j8 EXTERNAL_MCS=${PWD}/mcs/class/lib/monolite/gmcs.exe
+  - date
+  # why is make install needed for testing?
+  - sudo make install
+  - date
+  - cd $TEST_FOLDER && make check
+  - date
