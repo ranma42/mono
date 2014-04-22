@@ -1,0 +1,19 @@
+language: c
+compiler:
+  - gcc
+  - clang
+env:
+  - TEST_FOLDER=mono TEST_TARGET=check CI=1 V=1
+  - TEST_FOLDER=mcs TEST_TARGET=compiler-tests
+  - TEST_FOLDER=mcs/class TEST_TARGET=check PROFILE=net_2_0
+  - TEST_FOLDER=mcs/class TEST_TARGET=check PROFILE=net_3_5
+  - TEST_FOLDER=mcs/class TEST_TARGET=check PROFILE=net_4_0
+  - TEST_FOLDER=mcs/class TEST_TARGET=check PROFILE=net_4_5
+  - TEST_FOLDER=mcs/class TEST_TARGET=check PROFILE=xbuild_12
+before_install:
+  - ./autogen.sh
+install:
+  - make get-monolite-latest
+script:
+  - make -j8 EXTERNAL_MCS=${PWD}/mcs/class/lib/monolite/gmcs.exe
+  - make -k -w -C $TEST_FOLDER $TEST_TARGET
