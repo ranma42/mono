@@ -5,6 +5,8 @@ compiler:
 env:
   - TEST_FOLDER=mono TEST_TARGET=check CI=1 V=1
 before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq gdb
   - ./autogen.sh
 install:
   - make get-monolite-latest
