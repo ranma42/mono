@@ -16,4 +16,4 @@ script:
   - sudo make install
   - make -C $TEST_FOLDER $TEST_TARGET
   - cd mono/tests
-  - (echo "handle all noprint" ; echo "handle SIGABRT stop" ; echo "run" ; sleep 60 ; echo "thread apply all bt") | gdb --args mono bug-18026.exe
+  - (echo "handle all noprint" ; for i in 0 1 2 3 4 5 6 7 8 9 a b c d e f ; do echo ; done ; "handle SIGABRT stop" ; echo "run" ; sleep 60 ; echo "thread apply all bt") | gdb --args mono bug-18026.exe
