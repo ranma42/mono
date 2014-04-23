@@ -5,16 +5,11 @@ compiler:
 env:
   - TEST_FOLDER=mono TEST_TARGET=check CI=1 V=1
   - TEST_FOLDER=mcs TEST_TARGET=compiler-tests
-  - TEST_FOLDER=mcs/class TEST_TARGET=run-test PROFILE=net_2_0
-  - TEST_FOLDER=mcs/class TEST_TARGET=run-test PROFILE=net_3_5
-  - TEST_FOLDER=mcs/class TEST_TARGET=run-test PROFILE=net_4_0
-  - TEST_FOLDER=mcs/class TEST_TARGET=run-test PROFILE=net_4_5
-  - TEST_FOLDER=mcs/class TEST_TARGET=run-test PROFILE=xbuild_12
-matrix:
-  # net_3_5 and xbuild_12 are currently failing... should investigate?
-  allow_failures:
-    - env: TEST_FOLDER=mcs/class TEST_TARGET=run-test PROFILE=net_3_5
-    - env: TEST_FOLDER=mcs/class TEST_TARGET=run-test PROFILE=xbuild_12
+  - TEST_FOLDER=mcs/class TEST_TARGET="test run-test" PROFILE=net_2_0
+  - TEST_FOLDER=mcs/class TEST_TARGET="test run-test" PROFILE=net_3_5
+  - TEST_FOLDER=mcs/class TEST_TARGET="test run-test" PROFILE=net_4_0
+  - TEST_FOLDER=mcs/class TEST_TARGET="test run-test" PROFILE=net_4_5
+  - TEST_FOLDER=mcs/class TEST_TARGET="test run-test" PROFILE=xbuild_12
 before_install:
   - date
   - ./autogen.sh
