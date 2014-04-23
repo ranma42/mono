@@ -1,6 +1,5 @@
 language: objective-c
 compiler:
-  - gcc
   - clang
 env:
   - TEST_FOLDER=mono TEST_TARGET=check CI=1 V=1
@@ -12,7 +11,11 @@ env:
   - TEST_FOLDER=mcs/class TEST_TARGET="test run-test" PROFILE=xbuild_12
 before_install:
   - date
-  - ./autogen.sh
+  - brew update
+  - brew install gettext
+  - date
+  - GET_BIN=/usr/local/Cellar/gettext/*/bin/
+  - PATH=$GET_BIN:$PATH ./autogen.sh
 install:
   - date
   - make get-monolite-latest
