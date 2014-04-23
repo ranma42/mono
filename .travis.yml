@@ -5,6 +5,7 @@ compiler:
 env:
   - TEST_FOLDER=mono TEST_TARGET=check CI=1 V=1
 before_install:
+  - cat /proc/cpuinfo
   - sudo apt-get update -qq
   - sudo apt-get install -qq gdb
   - ./autogen.sh
@@ -15,4 +16,4 @@ script:
   - sudo make install
   - make -C $TEST_FOLDER $TEST_TARGET
   - cd mono/tests
-  - (echo "run" ; sleep 30 ; echo "thread apply all bt") | gdb --args mono bug-18026.exe
+  - (echo "handle SIGPWR nostop" ; echo "handle SIGXCPU nostop" ; echo "run" ; sleep 30 ; echo "thread apply all bt") | gdb --args mono bug-18026.exe
