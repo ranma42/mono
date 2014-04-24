@@ -17,3 +17,4 @@ script:
   - make -C $TEST_FOLDER $TEST_TARGET
   - cd mono/tests
   - mono bug-18026.exe
+  - gdb --version
