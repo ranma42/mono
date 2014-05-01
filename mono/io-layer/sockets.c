@@ -99,6 +99,7 @@ static void socket_close (gpointer handle, gpointer data)
 		ret = close (GPOINTER_TO_UINT(handle));
 	} while (ret == -1 && errno == EINTR &&
 		 !_wapi_thread_cur_apc_pending ());
+	fprintf (stderr, "0x%lx closed %d\n", pthread_self(), GPOINTER_TO_UINT(handle));
 	
 	if (ret == -1) {
 		gint errnum = errno;
@@ -565,6 +566,7 @@ int _wapi_recvfrom(guint32 fd, void *buf, size_t len, int recv_flags,
 	struct _WapiHandle_socket *socket_handle;
 	gboolean ok;
 	int ret;
+	pthread_t tid = pthread_self ();
 	
 	if (startup_count == 0) {
 		WSASetLastError (WSANOTINITIALISED);
@@ -577,9 +579,18 @@ int _wapi_recvfrom(guint32 fd, void *buf, size_t len, int recv_flags,
 	}
 	
 	do {
+		/*
+		 * We're unlucky and the scheduler decides that right
+		 * now something else should run :(
+		 */
+		fprintf (stderr, "0x%lx sleeping on %d...\n", tid, fd);
+		usleep(500 * 1000);
+
+		fprintf (stderr, "0x%lx receiving on %d...\n", tid, fd);
 		ret = recvfrom (fd, buf, len, recv_flags, from, fromlen);
 	} while (ret == -1 && errno == EINTR &&
 		 !_wapi_thread_cur_apc_pending ());
+	fprintf (stderr, "0x%lx received on %d (%d)\n", tid, fd, ret);
 
 	if (ret == 0 && len > 0) {
 		/* According to the Linux man page, recvfrom only
@@ -903,6 +914,7 @@ guint32 _wapi_socket(int domain, int type, int protocol, void *unused,
 	socket_handle.still_readable = 1;
 	
 	fd = socket (domain, type, protocol);
+	fprintf (stderr, "0x%lx socket %d\n", pthread_self (), fd);
 	if (fd == -1 && domain == AF_INET && type == SOCK_RAW &&
 	    protocol == 0) {
 		/* Retry with protocol == 4 (see bug #54565) */
