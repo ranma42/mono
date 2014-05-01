@@ -2685,6 +2685,37 @@ namespace MonoTests.System.Net.Sockets
 			Assert.IsFalse (CWRReceiving);
 		}
 
+		[Test]
+		public void CloseAndOpenWhileReceiving ()
+		{
+			CWRSocket = new Socket (AddressFamily.InterNetwork,
+						SocketType.Dgram,
+						ProtocolType.Udp);
+			CWRSocket.Bind (new IPEndPoint (IPAddress.Loopback,
+							1256));
+
+			Thread recv_thread = new Thread (new ThreadStart (CWRReceiveThread));
+			CWRReady.Reset ();
+			recv_thread.Start ();
+			Thread.Sleep (250);	/* Wait for the thread to be already receiving */
+
+			/* Close the socket and immediately reopen it,
+			 * so that the new one is likely to get the
+			 * same file descriptor as the old one. */
+			CWRSocket.Close ();
+			CWRSocket = new Socket (AddressFamily.InterNetwork,
+						SocketType.Dgram,
+						ProtocolType.Udp);
+			try {
+				if (CWRReady.WaitOne (2000, false) == false) {
+					Assert.Fail ("CloseAndOpenWhileReceiving wait timed out");
+				}
+				Assert.IsFalse (CWRReceiving);
+			} finally {
+				CWRSocket.Close();
+			}
+		}
+
 		static bool RRCLastRead = false;
 		static ManualResetEvent RRCReady = new ManualResetEvent (false);
 		
