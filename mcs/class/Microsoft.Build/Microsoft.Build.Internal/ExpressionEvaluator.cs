@@ -39,9 +39,8 @@ namespace Microsoft.Build.Internal.Expressions
 {
 	class ExpressionEvaluator
 	{
-		public ExpressionEvaluator (Project project, string replacementForMissingPropertyAndItem)
+		public ExpressionEvaluator (Project project)
 		{
-			ReplacementForMissingPropertyAndItem = replacementForMissingPropertyAndItem;
 			Project = project;
 			/*
 			GetItems = (name) => project.GetItems (name).Select (i => new KeyValuePair<string,string> (i.ItemType, i.EvaluatedInclude));
@@ -52,9 +51,8 @@ namespace Microsoft.Build.Internal.Expressions
 			*/
 		}
 		
-		public ExpressionEvaluator (ProjectInstance project, string replacementForMissingPropertyAndItem)
+		public ExpressionEvaluator (ProjectInstance project)
 		{
-			ReplacementForMissingPropertyAndItem = replacementForMissingPropertyAndItem;
 			ProjectInstance = project;
 			/*
 			GetItems = (name) => project.GetItems (name).Select (i => new KeyValuePair<string,string> (i.ItemType, i.EvaluatedInclude));
@@ -75,13 +73,12 @@ namespace Microsoft.Build.Internal.Expressions
 		//public Func<string,IEnumerable<KeyValuePair<string,string>>> GetItems { get; private set; }
 		//public Func<string,KeyValuePair<string,string>> GetProperty { get; private set; }
 		
-		public string ReplacementForMissingPropertyAndItem { get; set; }
-		
-		// it is to prevent sequential property value expansion in boolean expression
-		public string Wrapper {
-			get { return ReplacementForMissingPropertyAndItem != null ? "'" : null; }
+		List<ITaskItem> evaluated_task_items = new List<ITaskItem> ();
+
+		public IList<ITaskItem> EvaluatedTaskItems {
+			get { return evaluated_task_items; }
 		}
-		
+
 		public string Evaluate (string source)
 		{
 			return Evaluate (source, new ExpressionParserManual (source ?? string.Empty, ExpressionValidationType.LaxString).Parse ());
@@ -122,7 +119,7 @@ namespace Microsoft.Build.Internal.Expressions
 		
 		Stack<object> evaluating_items = new Stack<object> ();
 		Stack<object> evaluating_props = new Stack<object> ();
-		
+
 		public IEnumerable<object> GetItems (string name)
 		{
 			if (Evaluator.Project != null)
@@ -148,8 +145,12 @@ namespace Microsoft.Build.Internal.Expressions
 				var eval = item as ProjectItem;
 				if (eval != null)
 					return Evaluator.Evaluate (eval.EvaluatedInclude);
-				else
-					return Evaluator.Evaluate (((ProjectItemInstance) item).EvaluatedInclude);
+				else {
+					var inst = (ProjectItemInstance) item;
+					if (!Evaluator.EvaluatedTaskItems.Contains (inst))
+						Evaluator.EvaluatedTaskItems.Add (inst);
+					return Evaluator.Evaluate (inst.EvaluatedInclude);
+				}
 			} finally {
 				evaluating_items.Pop ();
 			}
@@ -319,8 +320,7 @@ namespace Microsoft.Build.Internal.Expressions
 		public override string EvaluateAsString (EvaluationContext context)
 		{
 			var ret = EvaluateAsObject (context);
-			// FIXME: this "wrapper" is kind of hack, to prevent sequential property references such as $(X)$(Y).
-			return ret == null ? context.Evaluator.ReplacementForMissingPropertyAndItem : context.Evaluator.Wrapper + ret.ToString () + context.Evaluator.Wrapper;
+			return ret == null ? null : ret.ToString ();
 		}
 		
 		public override object EvaluateAsObject (EvaluationContext context)
@@ -418,7 +418,7 @@ namespace Microsoft.Build.Internal.Expressions
 			string itemType = Application.Name.Name;
 			var items = context.GetItems (itemType);
 			if (!items.Any ())
-				return context.Evaluator.ReplacementForMissingPropertyAndItem;
+				return null;
 			if (Application.Expressions == null)
 				return string.Join (";", items.Select (item => context.EvaluateItem (itemType, item)));
 			else
@@ -427,7 +427,7 @@ namespace Microsoft.Build.Internal.Expressions
 					var ret = string.Concat (Application.Expressions.Select (e => e.EvaluateAsString (context)));
 					context.ContextItem = null;
 					return ret;
-					}));
+				}));
 		}
 		
 		public override object EvaluateAsObject (EvaluationContext context)

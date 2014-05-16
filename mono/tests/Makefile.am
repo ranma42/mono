@@ -556,7 +556,6 @@ DISABLED_TESTS=			\
 DISABLED_TESTS_WRENCH=	\
 	$(DISABLED_TESTS)	\
 	$(PLATFORM_DISABLED_TESTS_WRENCH)	\
-	bug-18026.exe	\
 	main-returns-background-resetabort.exe \
 	main-returns-background-abort-resetabort.exe	\
 	thread6.exe	\
@@ -826,8 +825,8 @@ runtest: $(TESTSI_CS) $(TESTSI_IL) $(TESTBS) libtest.la $(PREREQSI_IL) $(PREREQS
 	fi
 
 runtest-managed: test-runner.exe $(TESTSI_CS) $(TESTSI_IL) $(TESTBS) libtest.la $(PREREQSI_IL) $(PREREQSI_CS)
-	if [ "x$$CI" = "x1" ]; then disabled_tests="$(DISABLED_TESTS_WRENCH)"; else disabled_tests="$(DISABLED_TESTS)"; fi; \
-	@$(RUNTIME) ./test-runner.exe -j a --disabled '$${disabled_tests}' $(TESTSI_CS) $(TESTBS) $(TESTSI_IL)
+	@if [ "x$$CI" = "x1" ]; then disabled_tests="$(DISABLED_TESTS_WRENCH)"; else disabled_tests="$(DISABLED_TESTS)"; fi; \
+	$(RUNTIME) ./test-runner.exe -j a --disabled "$${disabled_tests}" $(TESTSI_CS) $(TESTBS) $(TESTSI_IL)
 
 testjit:
 	@if test x$(M) != x; then $(MAKE) runtest-managed; else $(MAKE) runtest; fi
@@ -915,13 +914,21 @@ SGEN_CONFIGURATIONS =	\
 	"major=marksweep-conc|ms-conc"	\
 	"major=marksweep-conc,minor=split|ms-conc-split"	\
 	"minor=split|ms-split"	\
-	"minor=split,alloc-ratio=95|ms-split-95"
+	"minor=split,alloc-ratio=95|ms-split-95"	\
+	"|plain-clear-at-gc|clear-at-gc"	\
+	"major=marksweep-par|ms-par-clear-at-gc|clear-at-gc"	\
+	"major=marksweep-conc|ms-conc-clear-at-gc|clear-at-gc"	\
+	"minor=split|ms-split-clear-at-gc|clear-at-gc"
+
 
 #FIXME We should move to use SGEN_CONFIGURATIONS once sgen supports trailling commas or its argument list.
 SGEN_BRIDGE_CONFIGURATIONS =	\
 	"|plain"	\
 	",major=marksweep-conc|ms-conc"	\
-	",minor=split|ms-split"
+	",minor=split|ms-split"	\
+	",bridge-implementation=new|plain-new-bridge"	\
+	",bridge-implementation=new,major=marksweep-conc|ms-conc-new-bridge"	\
+	",bridge-implementation=new,minor=split|ms-split-new-bridge"
 
 sgen-regular-tests: $(SGEN_TESTS)
 	@failed=0; \
@@ -933,8 +940,9 @@ sgen-regular-tests: $(SGEN_TESTS)
 		for conf in $(SGEN_CONFIGURATIONS); do 	\
 			name=`echo $$conf | cut -d\| -f 2`;	\
 			params=`echo $$conf | cut -d\| -f 1`;	\
+			debug_opt=`echo $$conf | cut -d\| -f 3`;	\
 			test_name="$${test}|$${name}";	\
-			if MONO_GC_PARAMS="$$params" MONO_ENV_OPTIONS="--gc=sgen" $(srcdir)/test-driver '$(with_mono_path) $(JITTEST_PROG_RUN)' $$test_name "$(DISABLED_TESTS_SGEN)" "$${dump_action}" $(RUNTIME_ARGS);	\
+			if MONO_GC_PARAMS="$$params" MONO_ENV_OPTIONS="--gc=sgen" MONO_GC_DEBUG="$$debug_opt" $(srcdir)/test-driver '$(with_mono_path) $(JITTEST_PROG_RUN)' $$test_name "$(DISABLED_TESTS_SGEN)" "$${dump_action}" $(RUNTIME_ARGS);	\
 			then \
 				passed=`expr $${passed} + 1`; \
 			else \
@@ -959,7 +967,7 @@ sgen-bridge-tests1: sgen-bridge.exe sgen-bridge-major-fragmentation.exe
 			name=`echo $$conf | cut -d\| -f 2`;	\
 			params=`echo $$conf | cut -d\| -f 1`;	\
 			test_name="$${test}|$${name}";	\
-			if MONO_GC_PARAMS="bridge=Bridge$${params}" MONO_ENV_OPTIONS="--gc=sgen" $(srcdir)/test-driver '$(with_mono_path) $(JITTEST_PROG_RUN)' $$test_name "$(DISABLED_TESTS_SGEN)" "$${dump_action}" $(RUNTIME_ARGS);	\
+			if MONO_GC_DEBUG="bridge=Bridge$${params}" MONO_ENV_OPTIONS="--gc=sgen" $(srcdir)/test-driver '$(with_mono_path) $(JITTEST_PROG_RUN)' $$test_name "$(DISABLED_TESTS_SGEN)" "$${dump_action}" $(RUNTIME_ARGS);	\
 			then \
 				passed=`expr $${passed} + 1`; \
 			else \
@@ -984,7 +992,7 @@ sgen-bridge-tests2: sgen-bridge-xref.exe
 			name=`echo $$conf | cut -d\| -f 2`;	\
 			params=`echo $$conf | cut -d\| -f 1`;	\
 			test_name="$${test}|$${name}";	\
-			if MONO_GC_PARAMS="bridge=2Bridge$${params}" MONO_ENV_OPTIONS="--gc=sgen" $(srcdir)/test-driver '$(with_mono_path) $(JITTEST_PROG_RUN)' $$test_name "$(DISABLED_TESTS_SGEN)" "$${dump_action}" $(RUNTIME_ARGS);	\
+			if MONO_GC_DEBUG="bridge=2Bridge$${params}" MONO_ENV_OPTIONS="--gc=sgen" $(srcdir)/test-driver '$(with_mono_path) $(JITTEST_PROG_RUN)' $$test_name "$(DISABLED_TESTS_SGEN)" "$${dump_action}" $(RUNTIME_ARGS);	\
 			then \
 				passed=`expr $${passed} + 1`; \
 			else \

@@ -1463,6 +1463,12 @@ public class DebuggerTests
 		Assert.AreEqual ("static_foo", (e as StepEvent).Method.Name);
 		obj = frame.GetThis ();
 		AssertValue (null, obj);
+
+		// vtypes which reference themselves recursively
+		e = run_until ("vtypes4_2");
+		frame = e.Thread.GetFrames () [0];
+
+		Assert.IsTrue (frame.GetArgument (0) is StructMirror);
 	}
 
 	[Test]
@@ -3504,6 +3510,16 @@ public class DebuggerTests
 		AssertThrows<ArgumentException> (delegate {
 				e.Thread.SetIP (invalid_loc);
 			});
+	}
+
+	[Test]
+	public void NewInstanceNoCtor () {
+		var bevent = run_until ("Main");
+
+		var stype = bevent.Method.DeclaringType.Assembly.GetType ("AStruct");
+		var obj = stype.NewInstance ();
+		Assert.IsTrue (obj is ObjectMirror);
+		Assert.AreEqual ("AStruct", (obj as ObjectMirror).Type.Name);
 	}
 }
 

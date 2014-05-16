@@ -2027,6 +2027,24 @@ emit_pop_lmf (MonoCompile *cfg)
 	}
 }
 
+static void
+emit_instrumentation_call (MonoCompile *cfg, void *func)
+{
+	MonoInst *iargs [1];
+
+	/*
+	 * Avoid instrumenting inlined methods since it can
+	 * distort profiling results.
+	 */
+	if (cfg->method != cfg->current_method)
+		return;
+
+	if (cfg->prof_options & MONO_PROFILE_ENTER_LEAVE) {
+		EMIT_NEW_METHODCONST (cfg, iargs [0], cfg->method);
+		mono_emit_jit_icall (cfg, func, iargs);
+	}
+}
+
 static int
 ret_type_to_call_opcode (MonoType *type, int calli, int virt, MonoGenericSharingContext *gsctx)
 {
@@ -2482,9 +2500,11 @@ mono_emit_call_args (MonoCompile *cfg, MonoMethodSignature *sig,
 	int i;
 #endif
 
-	if (tail)
+	if (tail) {
+		emit_instrumentation_call (cfg, mono_profiler_method_leave);
+
 		MONO_INST_NEW_CALL (cfg, call, OP_TAILCALL);
-	else
+	} else
 		MONO_INST_NEW_CALL (cfg, call, ret_type_to_call_opcode (sig->ret, calli, virtual, cfg->generic_sharing_context));
 
 	call->args = args;
@@ -6878,7 +6898,7 @@ mono_method_to_ir (MonoCompile *cfg, MonoMethod *method, MonoBasicBlock *start_b
 			int *il_offsets;
 			int *line_numbers;
 
-			mono_debug_symfile_get_line_numbers_full (minfo, NULL, NULL, &n_il_offsets, &il_offsets, &line_numbers, NULL, NULL);
+			mono_debug_symfile_get_line_numbers_full (minfo, NULL, NULL, &n_il_offsets, &il_offsets, &line_numbers, NULL, NULL, NULL, NULL);
 			seq_point_locs = mono_bitset_mem_new (mono_mempool_alloc0 (cfg->mempool, mono_bitset_alloc_size (header->code_size, 0)), header->code_size, 0);
 			seq_point_set_locs = mono_bitset_mem_new (mono_mempool_alloc0 (cfg->mempool, mono_bitset_alloc_size (header->code_size, 0)), header->code_size, 0);
 			sym_seq_points = TRUE;
@@ -7391,7 +7411,7 @@ mono_method_to_ir (MonoCompile *cfg, MonoMethod *method, MonoBasicBlock *start_b
 		 * Currently, we generate these automatically at points where the IL
 		 * stack is empty.
 		 */
-		if (seq_points && ((sp == stack_start) || (sym_seq_points && mono_bitset_test_fast (seq_point_locs, ip - header->code)))) {
+		if (seq_points && ((!sym_seq_points && (sp == stack_start)) || (sym_seq_points && mono_bitset_test_fast (seq_point_locs, ip - header->code)))) {
 			/*
 			 * Make methods interruptable at the beginning, and at the targets of
 			 * backward branches.
@@ -7745,6 +7765,8 @@ mono_method_to_ir (MonoCompile *cfg, MonoMethod *method, MonoBasicBlock *start_b
 
 			if (mono_security_cas_enabled ())
 				CHECK_CFG_EXCEPTION;
+
+			emit_instrumentation_call (cfg, mono_profiler_method_leave);
 
 			if (ARCH_HAVE_OP_TAIL_CALL) {
 				MonoMethodSignature *fsig = mono_method_signature (cmethod);
@@ -8555,6 +8577,8 @@ mono_method_to_ir (MonoCompile *cfg, MonoMethod *method, MonoBasicBlock *start_b
 					/* Handle tail calls similarly to normal calls */
 					tail_call = TRUE;
 				} else {
+					emit_instrumentation_call (cfg, mono_profiler_method_leave);
+
 					MONO_INST_NEW_CALL (cfg, call, OP_JMP);
 					call->tail_call = TRUE;
 					call->method = cmethod;
@@ -8682,6 +8706,8 @@ mono_method_to_ir (MonoCompile *cfg, MonoMethod *method, MonoBasicBlock *start_b
 					cfg->ret_var_set = TRUE;
 				} 
 			} else {
+				emit_instrumentation_call (cfg, mono_profiler_method_leave);
+
 				if (cfg->lmf_var && cfg->cbb->in_count)
 					emit_pop_lmf (cfg);
 
@@ -12178,6 +12204,9 @@ mono_method_to_ir (MonoCompile *cfg, MonoMethod *method, MonoBasicBlock *start_b
 		cfg->cbb = init_localsbb;
 		emit_push_lmf (cfg);
 	}
+
+	cfg->cbb = init_localsbb;
+	emit_instrumentation_call (cfg, mono_profiler_method_enter);
 
 	if (seq_points) {
 		MonoBasicBlock *bb;

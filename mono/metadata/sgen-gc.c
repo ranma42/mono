@@ -3839,7 +3839,7 @@ sgen_thread_detach (SgenThreadInfo *p)
 	 * the thread
 	 */
 	if (mono_domain_get ())
-		mono_thread_detach (mono_thread_current ());
+		mono_thread_detach_internal (mono_thread_internal_current ());
 }
 
 static void
@@ -4580,6 +4580,7 @@ mono_gc_base_init (void)
 	sgen_init_nursery_allocator ();
 	sgen_init_fin_weak_hash ();
 	sgen_init_stw ();
+	sgen_init_hash_table ();
 
 	sgen_register_fixed_internal_mem_type (INTERNAL_MEM_SECTION, SGEN_SIZEOF_GC_MEM_SECTION);
 	sgen_register_fixed_internal_mem_type (INTERNAL_MEM_FINALIZE_READY_ENTRY, sizeof (FinalizeReadyEntry));
@@ -4726,9 +4727,9 @@ mono_gc_base_init (void)
 				}
 				continue;
 			}
-			if (g_str_has_prefix (opt, "bridge=")) {
+			if (g_str_has_prefix (opt, "bridge-implementation=")) {
 				opt = strchr (opt, '=') + 1;
-				sgen_register_test_bridge_callbacks (g_strdup (opt));
+				sgen_set_bridge_implementation (opt);
 				continue;
 			}
 			if (g_str_has_prefix (opt, "toggleref-test")) {
@@ -4961,9 +4962,7 @@ mono_gc_base_init (void)
 			} else if (g_str_has_prefix (opt, "binary-protocol=")) {
 				char *filename = strchr (opt, '=') + 1;
 				binary_protocol_init (filename);
-			} else if (!strcmp (opt, "enable-bridge-accounting")) {
-				sgen_enable_bridge_accounting ();
-			} else {
+			} else if (!sgen_bridge_handle_gc_debug (opt)) {
 				sgen_env_var_error (MONO_GC_DEBUG_NAME, "Ignoring.", "Unknown option `%s`.", opt);
 
 				if (usage_printed)
@@ -4991,7 +4990,7 @@ mono_gc_base_init (void)
 				fprintf (stderr, "  print-pinning\n");
 				fprintf (stderr, "  heap-dump=<filename>\n");
 				fprintf (stderr, "  binary-protocol=<filename>\n");
-				fprintf (stderr, "  enable-bridge-accounting\n");
+				sgen_bridge_print_gc_debug_usage ();
 				fprintf (stderr, "\n");
 
 				usage_printed = TRUE;
@@ -5328,6 +5327,8 @@ mono_gc_get_vtable_bits (MonoClass *class)
 	case GC_BRIDGE_TRANSPARENT_BRIDGE_CLASS:
 	case GC_BRIDGE_OPAQUE_BRIDGE_CLASS:
 		return SGEN_GC_BIT_BRIDGE_OBJECT;
+	case GC_BRIDGE_OPAQUE_CLASS:
+		return SGEN_GC_BIT_BRIDGE_OPAQUE_OBJECT;
 	}
 	return 0;
 }
