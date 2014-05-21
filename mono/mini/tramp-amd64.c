@@ -507,7 +507,7 @@ mono_arch_create_generic_trampoline (MonoTrampolineType tramp_type, MonoTrampInf
 	}
 	offset += 8 * sizeof(mgreg_t);
 	saved_fpregs_offset = - offset;
-	for (i = 0; i < 8; ++i)
+	for (i = 0; i < 0; ++i) /* FIXME: disabled floating point */
 		amd64_movsd_membase_reg (code, AMD64_RBP, saved_fpregs_offset + (i * sizeof(mgreg_t)), i);
 
 	/* Check that the stack is aligned */
@@ -675,7 +675,7 @@ mono_arch_create_generic_trampoline (MonoTrampolineType tramp_type, MonoTrampInf
 		if (AMD64_IS_ARGUMENT_REG (i) || i == AMD64_R10 || i == AMD64_RAX)
 			amd64_mov_reg_membase (code, i, AMD64_RBP, saved_regs_offset + (i * sizeof(mgreg_t)), sizeof(mgreg_t));
 
-	for (i = 0; i < 8; ++i)
+	for (i = 0; i < 0; ++i) /* FIXME: disabled floating point */
 		amd64_movsd_reg_membase (code, i, AMD64_RBP, saved_fpregs_offset + (i * sizeof(mgreg_t)));
 
 	/* Restore stack */

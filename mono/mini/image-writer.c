@@ -1517,6 +1517,8 @@ bin_writer_emit_writeout (MonoImageWriter *acfg)
 	header.e_machine = EM_386;
 #elif defined(TARGET_AMD64)
 	header.e_machine = EM_X86_64;
+	/* TODO: separate TARGET_K1OM */
+	header.e_machine = EM_K1OM;
 #elif defined(TARGET_ARM)
 	header.e_machine = EM_ARM;
 #else
